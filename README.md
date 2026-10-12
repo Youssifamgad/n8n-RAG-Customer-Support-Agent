@@ -54,40 +54,46 @@ The workflow handles two autonomous cycles:
                                                    ▼
                                        [Gemini Embeddings]
 
--- 1. Enable pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector;
+<div align="center">
 
--- 2. Create the documents table
-CREATE TABLE IF NOT EXISTS documents (
-  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  content TEXT,
-  metadata JSONB,
-  embedding VECTOR(768)
-);
+# 🤖 Enterprise RAG AI Customer Support Agent
 
--- 3. Create vector similarity search function
-CREATE OR REPLACE FUNCTION match_documents (
-  query_embedding VECTOR(768),
-  match_count INT DEFAULT 5,
-  filter JSONB DEFAULT '{}'
-) RETURNS TABLE (
-  id BIGINT,
-  content TEXT,
-  metadata JSONB,
-  similarity FLOAT
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    documents.id,
-    documents.content,
-    documents.metadata,
-    1 - (documents.embedding <=> query_embedding) AS similarity
-  FROM documents
-  WHERE documents.metadata @> filter
-  ORDER BY documents.embedding <=> query_embedding
-  LIMIT match_count;
-END;
-$$;
+<b>An Autonomous, Zero-Hallucination, Bilingual AI Support Automation Engine</b>
+
+[![n8n](https://img.shields.io/badge/n8n-FF6D5A?style=for-the-badge&logo=n8n&logoColor=white)](https://n8n.io)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-8E75B2?style=for-the-badge&logo=google%20gemini&logoColor=white)](https://ai.google.dev)
+[![Telegram](https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://telegram.org)
+
+</div>
+
+---
+
+> [!IMPORTANT]
+> **Production Guardrails Active:** Powered by **Google Gemini 3.1 Flash Lite** and **Supabase `pgvector`**. This agent is strictly grounded in official policy documentation from Google Drive, completely eliminating AI hallucinations and safely declining out-of-scope inquiries.
+
+---
+
+## 📐 System Architecture
+
+Below is the automated data flow rendering both the **ETL Ingestion Pipeline** and the **Real-Time Support Agent**:
+
+```mermaid
+graph TD
+    subgraph ETL_Pipeline ["1️⃣ Automated Knowledge Ingestion Pipeline"]
+        GD[📁 Google Drive Folder] -->|File Upload / Update| DL[⬇️ Download PDF]
+        DL --> Read[📄 Extract Text Chunks]
+        Read --> Emb1[🧠 Gemini Embeddings]
+        Emb1 -->|768-d Vectors| SupabaseInsert[(⚡ Supabase Vector Store)]
+    end
+
+    subgraph Agent_Pipeline ["2️⃣ Conversational RAG Support Agent"]
+        TG[💬 Telegram Customer Query] --> Agent[🤖 AI Agent Engine]
+        Agent <-->|Semantic Search| SupabaseTool[(⚡ Supabase Vector Tool)]
+        SupabaseTool <--> Emb2[🧠 Gemini Embeddings]
+        Agent <-->|Chat Context| Mem[🧠 Session Memory]
+        Agent -->|Grounded Response| SendTG[📩 Send Telegram Message]
+    end
+
+    style ETL_Pipeline fill:#1e293b,stroke:#3b82f6,color:#fff
+    style Agent_Pipeline fill:#0f172a,stroke:#10b981,color:#fff
