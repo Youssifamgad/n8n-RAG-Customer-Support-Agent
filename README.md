@@ -54,92 +54,40 @@ The workflow handles two autonomous cycles:
                                                    ▼
                                        [Gemini Embeddings]
 
+-- 1. Enable pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
 
-🔍 Detailed Node Breakdown
-1. Ingestion Sub-System (ETL)
-Google Drive Trigger (googleDriveTrigger): Polls for fileUpdated events every minute in a targeted Google Drive folder.
-
-Download File (googleDrive): Fetches the actual PDF file from Google Drive when changes are detected.
-
-Default Data Loader (documentDefaultDataLoader): Parses the PDF file into structured text chunks ready for vector processing.
-
-Embeddings Google Gemini (embeddingsGoogleGemini): Converts text chunks into 768-dimensional mathematical vector embeddings representing semantic meaning.
-
-Supabase Vector Store - Ingest (vectorStoreSupabase): Batches embeddings (batch size: 20) and inserts them into the Supabase documents table.
-
-2. Conversational Sub-System (RAG Agent)
-Telegram Trigger (telegramTrigger): Listens for incoming customer queries via webhooks.
-
-Simple Memory (memoryBufferWindow): Maintains conversational context per user by isolating sessions using {{ $json.message.chat.id }}.
-
-Google Gemini Chat Model (lmChatGoogleGemini): Powers the reasoning engine using gemini-3.1-flash-lite.
-
-Supabase Vector Store - Tool (vectorStoreSupabase): Exposes vector search as a callable tool for the Agent to fetch pertinent document chunks.
-
-AI Agent (agent): Connects the LLM, Memory, and Retrieval Tool under explicit system prompts.
-
-Send Text Message (telegram): Sends formatted, clean responses back to the user via Telegram.
-
--- Enable the pgvector extension
-create extension if not exists vector;
-
--- Create the documents table
-create table if not exists documents (
-  id bigint primary key generated always as identity,
-  content text,
-  metadata jsonb,
-  embedding vector(768)
+-- 2. Create documents table
+CREATE TABLE IF NOT EXISTS documents (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  content TEXT,
+  metadata JSONB,
+  embedding VECTOR(768)
 );
 
--- Create a match function for vector similarity search
-create or replace function match_documents (
-  query_embedding vector(768),
-  match_count int DEFAULT 5,
-  filter jsonb DEFAULT '{}'
-) returns table (
-  id bigint,
-  content text,
-  metadata jsonb,
-  similarity float
+-- 3. Create match documents function
+CREATE OR REPLACE FUNCTION match_documents (
+  query_embedding VECTOR(768),
+  match_count INT DEFAULT 5,
+  filter JSONB DEFAULT '{}'
+) RETURNS TABLE (
+  id BIGINT,
+  content TEXT,
+  metadata JSONB,
+  similarity FLOAT
 )
-language plpgsql
-as $$
-begin
-  return query
-  select
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
     documents.id,
     documents.content,
     documents.metadata,
-    1 - (documents.embedding <=> query_embedding) as similarity
-  from documents
-  where documents.metadata @> filter
-  order by documents.embedding <=> query_embedding
-  limit match_count;
-end;
+    1 - (documents.embedding <=> query_embedding) AS similarity
+  FROM documents
+  WHERE documents.metadata @> filter
+  ORDER BY documents.embedding <=> query_embedding
+  LIMIT match_count;
+END;
 $$;
-⚙️ Installation & Setup Guide
-Import Workflow:
-
-Download RAG AI AGENT (3).json from this repository.
-
-Open your n8n instance ➔ Click Workflows ➔ Select Import from File.
-
-Configure Credentials:
-
-Google Drive OAuth2 API: For folder monitoring and PDF downloads.
-
-Google Gemini API Key: For text embeddings and Chat LLM.
-
-Supabase API: Project URL and Service Role Key.
-
-Telegram Bot API: Token generated via Telegram's @BotFather.
-
-Node Parameter Tweaks:
-
-In Google Drive Trigger, update the folderToWatch ID to match your Drive folder.
-
-In Download file, set the File ID dynamically to ={{ $json.id }}.
-
-Activate & Run:
-
-Toggle the workflow status switch in n8n to Active.
