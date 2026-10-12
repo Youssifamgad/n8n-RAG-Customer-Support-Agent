@@ -1,99 +1,53 @@
-# 🤖 Enterprise RAG AI Customer Support Agent (n8n + Supabase + Gemini + Telegram)
+# AI Customer Support Bot using RAG & n8n
 
-An automated, production-ready, bilingual AI Customer Support Agent built using **n8n**, **Supabase Vector Store**, **Google Gemini AI**, and **Telegram**.
-
-This project implements an end-to-end **Retrieval-Augmented Generation (RAG)** architecture that synchronizes business documentation from **Google Drive**, processes and stores vector embeddings in **Supabase**, and serves users via an intelligent **Telegram Bot** with strict hallucination guardrails.
+An automated customer support assistant built with **n8n**, utilizing **RAG (Retrieval-Augmented Generation)** to answer policy-related queries accurately without hallucinations.
 
 ---
 
-## 📌 Table of Contents
-- [Project Overview](#-project-overview)
-- [Architecture & Data Flow](#-architecture--data-flow)
-- [Detailed Node Breakdown](#-detailed-node-breakdown)
-- [Key Features & Technical Highlights](#-key-features--technical-highlights)
-- [Real-World Testing & Verification](#-real-world-testing--verification)
-- [Supabase Database Setup](#-supabase-database-setup)
-- [Installation & Setup Guide](#-installation--setup-guide)
-- [System Guardrails & Prompt Engineering](#-system-guardrails--prompt-engineering)
+## 🛠️ Tech Stack & Architecture
+- **Automation Platform:** [n8n](https://n8n.io/)
+- **Large Language Model (LLM):** Google Gemini Chat Model
+- **Embedding Model:** Google Gemini Embeddings
+- **Vector Database:** Pinecone
+- **Interface:** Telegram Bot API
+- **Data Source:** Google Drive (Store Policy Documents: Shipping & Returns)
 
 ---
 
-## 🚀 Project Overview
+## 📸 Workflow Architecture
+The system consists of two core pipelines:
+1. **Data Ingestion Pipeline:** Syncs PDF policies from Google Drive, generates vector embeddings via Gemini, and indexes them into Pinecone.
+2. **Retrieval & Chat Pipeline:** Listens to Telegram messages, retrieves relevant context from Pinecone, maintains chat memory per user session, and returns precise answers.
 
-Traditional customer support bots often struggle with rigid decision trees or hallucinate answers when powered by pure LLMs. This project addresses both issues by combining **n8n's low-code workflow orchestration** with **LangChain RAG agents**.
-
-The workflow handles two autonomous cycles:
-1. **Automated Document Processing (ETL Pipeline):** Automatically detects updated policy documents in Google Drive, extracts binary text, generates semantic vector embeddings using Google Gemini, and indexes them into Supabase.
-2. **Conversational Support Agent (Retrieval Pipeline):** Listens to customer queries on Telegram, searches the vector database for relevant business context, and generates precise, grounded responses in both **Arabic** and **English**.
-
----
-
-## 🏗️ Architecture & Data Flow
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                                1. DOCUMENT INGESTION PIPELINE                            │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
-  [Google Drive Trigger] ──► [Download File] ──► [Default Data Loader]
-                                                          │
-                                                    (Text Chunks)
-                                                          │
-                                                          ▼
-  [Google Gemini Embeddings] ───────────────► [Supabase Vector Store (Insert)]
-
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                                2. CONVERSATIONAL RAG PIPELINE                           │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
-  [Telegram Trigger] ──► [AI Agent Node] ────────────────────────────────► [Send Telegram Msg]
-                            │  ▲
-      ┌─────────────────────┼──┴─────────────────────┐
-      │                     │                        │
-      ▼                     ▼                        ▼
-  [Gemini LLM]      [Simple Memory]      [Supabase Vector Tool]
-  (Gemini Flash)    (Chat ID Context)              │
-                                                   ▼
-                                       [Gemini Embeddings]
-
-<div align="center">
-
-# 🤖 Enterprise RAG AI Customer Support Agent
-
-<b>An Autonomous, Zero-Hallucination, Bilingual AI Support Automation Engine</b>
-
-[![n8n](https://img.shields.io/badge/n8n-FF6D5A?style=for-the-badge&logo=n8n&logoColor=white)](https://n8n.io)
-[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
-[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-8E75B2?style=for-the-badge&logo=google%20gemini&logoColor=white)](https://ai.google.dev)
-[![Telegram](https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://telegram.org)
-
-</div>
+![Workflow Overview](RAG_telegram_bot_Workflow.png)
 
 ---
 
-> [!IMPORTANT]
-> **Production Guardrails Active:** Powered by **Google Gemini 3.1 Flash Lite** and **Supabase `pgvector`**. This agent is strictly grounded in official policy documentation from Google Drive, completely eliminating AI hallucinations and safely declining out-of-scope inquiries.
+## 🧪 Testing & Evaluation (In-Scope vs. Out-of-Scope)
 
+The agent was evaluated with both Arabic and English queries to verify retrieval accuracy and multilingual capabilities across different scenarios.
+
+### Arabic Interaction (Localized Support)
+![Telegram Chat Arabic](Telegram_Chat_Ar.png)
+
+### English Interaction (Multilingual Support)
+![Telegram Chat English](Telegram_Chat_En.png)
+
+### Evaluation Summary:
+- **In-Scope Queries:**
+  - **Return Conditions:** Successfully retrieved exact conditions (30-day window, original packaging).
+  - **Shipping Timelines:** Accurately provided delivery estimations based on shipping tiers.
+- **Out-of-Scope Queries:**
+  - **HR / Vacation Policy:** The agent checked Pinecone, verified that documents only cover shipping/returns, and directed the user to HR without fabricating answers.
+  - **General Knowledge:** Answered general questions while explicitly noting that the query falls outside the store policy domain.
 ---
 
-## 📐 System Architecture
-
-Below is the automated data flow rendering both the **ETL Ingestion Pipeline** and the **Real-Time Support Agent**:
-
-```mermaid
-graph TD
-    subgraph ETL_Pipeline ["1️⃣ Automated Knowledge Ingestion Pipeline"]
-        GD[📁 Google Drive Folder] -->|File Upload / Update| DL[⬇️ Download PDF]
-        DL --> Read[📄 Extract Text Chunks]
-        Read --> Emb1[🧠 Gemini Embeddings]
-        Emb1 -->|768-d Vectors| SupabaseInsert[(⚡ Supabase Vector Store)]
-    end
-
-    subgraph Agent_Pipeline ["2️⃣ Conversational RAG Support Agent"]
-        TG[💬 Telegram Customer Query] --> Agent[🤖 AI Agent Engine]
-        Agent <-->|Semantic Search| SupabaseTool[(⚡ Supabase Vector Tool)]
-        SupabaseTool <--> Emb2[🧠 Gemini Embeddings]
-        Agent <-->|Chat Context| Mem[🧠 Session Memory]
-        Agent -->|Grounded Response| SendTG[📩 Send Telegram Message]
-    end
-
-    style ETL_Pipeline fill:#1e293b,stroke:#3b82f6,color:#fff
-    style Agent_Pipeline fill:#0f172a,stroke:#10b981,color:#fff
+## 🚀 How to Run
+1. Import the `RAG-telegram-bot.json` file into your n8n workspace.
+2. Add your credentials for:
+   - Google Drive
+   - Google Gemini API
+   - Pinecone (API Key & Index)
+   - Telegram Bot Token
+3. Update the Pinecone index name to match your setup.
+4. Activate the workflow and test via Telegram!
