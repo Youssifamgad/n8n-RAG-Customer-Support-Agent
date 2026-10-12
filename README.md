@@ -57,7 +57,7 @@ The workflow handles two autonomous cycles:
 -- 1. Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- 2. Create documents table
+-- 2. Create the documents table
 CREATE TABLE IF NOT EXISTS documents (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   content TEXT,
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS documents (
   embedding VECTOR(768)
 );
 
--- 3. Create match documents function
+-- 3. Create vector similarity search function
 CREATE OR REPLACE FUNCTION match_documents (
   query_embedding VECTOR(768),
   match_count INT DEFAULT 5,
